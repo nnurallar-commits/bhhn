@@ -1,4 +1,10 @@
-# bhhn. v7 — balance between us
+# bhhn. v8 — balance between us
+
+## v8 Firebase bağlantısı
+
+- `bhhn-ac697` Firebase web yapılandırması bağlandı.
+- E-posta/şifre ve Google giriş altyapısı aktif edildi.
+- PC ve telefon aynı hesap/ortak alana girdiğinde Firestore üzerinden aynı kayıtları görür.
 
 Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 
