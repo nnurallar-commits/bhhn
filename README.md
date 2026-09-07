@@ -1,4 +1,4 @@
-# bhhn. v6 — balance between us
+# bhhn. v7 — balance between us
 
 Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 
@@ -15,6 +15,12 @@ Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 - Canlı Firestore senkronizasyonu
 - Workspace'e özel yerel önbellek ve JSON yedek
 - PWA, iPhone ana ekranına eklenebilir
+
+## v7 düzeltmesi
+
+- Logo uygulama koduna gömüldü; GitHub Pages üzerinde `assets` klasörü eksik olsa bile görünür.
+- Eksik görsel dosyaları artık Service Worker kurulumunu engellemez.
+- Tarayıcı sekme ikonu da gömülü logodan oluşturulur.
 
 ## v6 yenilikleri
 

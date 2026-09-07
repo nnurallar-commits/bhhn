@@ -1,5 +1,13 @@
 const STORAGE_KEY = 'bhhn_state_v1';
 const PROFILE_KEY = 'bhhn_current_user';
+
+// GitHub'a görsel klasörü yüklenmese bile uygulamadaki tüm logo alanlarını çalıştır.
+document.addEventListener('error', event => {
+  const image = event.target;
+  if (image instanceof HTMLImageElement && image.src.includes('bhhn-logo')) {
+    image.src = window.BHHN_EMBEDDED_LOGO;
+  }
+}, true);
 const DEFAULT_MEMBERS = [
   { id: 'nisu', name: 'Nisu' },
   { id: 'hatice', name: 'Hatice Nur' },
