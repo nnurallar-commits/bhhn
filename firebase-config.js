@@ -1,12 +1,10 @@
-// Firebase ile gerçek zamanlı ortak kullanım için bu nesneyi kendi Firebase web app ayarlarınla doldur.
-// Boş bırakılırsa uygulama tamamen hatasız şekilde bu cihazın localStorage'ında çalışır.
-window.BHHN_FIREBASE_CONFIG = null;
-// Örnek:
-// window.BHHN_FIREBASE_CONFIG = {
-//   apiKey: "...",
-//   authDomain: "...firebaseapp.com",
-//   projectId: "...",
-//   storageBucket: "...appspot.com",
-//   messagingSenderId: "...",
-//   appId: "..."
-// };
+// bhhn-ac697 Firebase web uygulaması
+window.BHHN_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB6fui3vHDSDPchhRXhQypbw1gyMO3di0g",
+  authDomain: "bhhn-ac697.firebaseapp.com",
+  projectId: "bhhn-ac697",
+  storageBucket: "bhhn-ac697.firebasestorage.app",
+  messagingSenderId: "325054358955",
+  appId: "1:325054358955:web:c3956acbf7ca6019a71eee",
+  measurementId: "G-Q89773V2NR"
+};
