@@ -1,4 +1,4 @@
-# bhhn. v5 — balance between us
+# bhhn. v6 — balance between us
 
 Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 
@@ -15,6 +15,14 @@ Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 - Canlı Firestore senkronizasyonu
 - Workspace'e özel yerel önbellek ve JSON yedek
 - PWA, iPhone ana ekranına eklenebilir
+
+## v6 yenilikleri
+
+- Gönderilen dört arkadaş görseli ana sayfada, üst çubukta, açılışta, ayarlarda ve PWA ikonlarında görünür.
+- İlk profil seçim ekranında herkes için doğrudan `kişi ekle` düğmesi bulunur.
+- Ayarlar > Profil bölümünden de yeni kişi eklenebilir.
+- Yeni kişi kayıtlı gruplara sonradan eklenebilir veya yeni grup açabilir.
+- Service Worker önbelleği `bhhn-v6` olarak yenilendi.
 
 ## v5 yenilikleri
 

@@ -1,14 +1,14 @@
 {
   "name": "bhhn. — balance between us",
   "short_name": "bhhn.",
-  "description": "Dört arkadaş için ortak harcama ve borç takibi.",
+  "description": "Arkadaş grupları için ortak harcama ve borç takibi.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f8f5ed",
   "theme_color": "#455a49",
   "icons": [
-    {"src":"assets/logo-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
-    {"src":"assets/logo-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {"src":"assets/bhhn-logo-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"assets/bhhn-logo-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
