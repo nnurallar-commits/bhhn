@@ -1,4 +1,4 @@
-const CACHE = 'bhhn-v9';
+const CACHE = 'bhhn-v10';
 // Logo HTML içine gömülü; GitHub'da assets klasörü eksik olsa da önbellek kurulumu bozulmaz.
 const ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));

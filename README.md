@@ -1,4 +1,10 @@
-# bhhn. v9 — balance between us
+# bhhn. v10 — balance between us
+
+## v10 eski görünüm + güvenli geçiş
+
+- Tam ekran giriş sayfası kaldırıldı; uygulama eskisi gibi profil seçimiyle açılır.
+- Firebase girişi yalnızca Ayarlar içindeki senkronizasyon düğmesinden açılır.
+- İlk ortak alan oluşturulurken mevcut yerel gruplar, harcamalar ve borçlar otomatik taşınır.
 
 ## v9 Firebase düzeltmesi
 
