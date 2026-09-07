@@ -1,4 +1,9 @@
-# bhhn. v8 — balance between us
+# bhhn. v9 — balance between us
+
+## v9 Firebase düzeltmesi
+
+- Firebase API anahtarındaki `0/O` karakter hatası düzeltildi.
+- Giriş hataları artık gerçek Firebase hata kodunu anlaşılır biçimde gösterir.
 
 ## v8 Firebase bağlantısı
 

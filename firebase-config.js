@@ -1,6 +1,6 @@
 // bhhn-ac697 Firebase web uygulaması
 window.BHHN_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyB6fui3vHDSDPchhRXhQypbw1gyM03di0g",
+  apiKey: "AIzaSyB6fui3vHDSDPchhRXhQypbw1gyMO3di0g",
   authDomain: "bhhn-ac697.firebaseapp.com",
   projectId: "bhhn-ac697",
   storageBucket: "bhhn-ac697.firebasestorage.app",
