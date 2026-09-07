@@ -1,0 +1,180 @@
+{
+  "app": "bhhn",
+  "exportedAt": "2026-09-07T11:40:13.998Z",
+  "data": {
+    "version": 2,
+    "members": [
+      {
+        "id": "nisu",
+        "name": "Nisu"
+      },
+      {
+        "id": "hatice",
+        "name": "Hatice Nur"
+      },
+      {
+        "id": "berfin",
+        "name": "Berfin"
+      },
+      {
+        "id": "heda",
+        "name": "Heda"
+      }
+    ],
+    "groups": [
+      {
+        "id": "ev",
+        "name": "NN&HNY",
+        "emoji": "🏠",
+        "memberIds": [
+          "nisu",
+          "hatice"
+        ],
+        "accent": "mint",
+        "createdAt": "2026-09-07T09:00:00.000Z"
+      },
+      {
+        "id": "dordumuz",
+        "name": "BHHN",
+        "emoji": "✨",
+        "memberIds": [
+          "nisu",
+          "hatice",
+          "berfin",
+          "heda"
+        ],
+        "accent": "lilac",
+        "createdAt": "2026-09-07T09:01:00.000Z"
+      }
+    ],
+    "expenses": [
+      {
+        "id": "exp_mtr4cbzc_vg9pel",
+        "groupId": "ev",
+        "title": "maydonoz döner",
+        "amount": 340,
+        "date": "2026-09-07",
+        "category": "diger",
+        "payerId": "nisu",
+        "splits": {
+          "nisu": 170,
+          "hatice": 170
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:49:38.472Z",
+        "updatedAt": "2026-09-07T10:49:38.472Z"
+      },
+      {
+        "id": "exp_mtr4cmyy_ve04on",
+        "groupId": "ev",
+        "title": "filtre kahve",
+        "amount": 210,
+        "date": "2026-09-06",
+        "category": "diger",
+        "payerId": "nisu",
+        "splits": {
+          "nisu": 105,
+          "hatice": 105
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:49:52.714Z",
+        "updatedAt": "2026-09-07T10:49:52.714Z"
+      },
+      {
+        "id": "exp_mtr4cyjl_kqschp",
+        "groupId": "ev",
+        "title": "askı",
+        "amount": 360,
+        "date": "2026-09-06",
+        "category": "diger",
+        "payerId": "nisu",
+        "splits": {
+          "nisu": 180,
+          "hatice": 180
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:50:07.713Z",
+        "updatedAt": "2026-09-07T10:50:07.713Z"
+      },
+      {
+        "id": "exp_mtr4da77_bkdhrj",
+        "groupId": "ev",
+        "title": "koltuk yıkama",
+        "amount": 1200,
+        "date": "2026-09-06",
+        "category": "diger",
+        "payerId": "nisu",
+        "splits": {
+          "nisu": 600,
+          "hatice": 600
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:50:22.819Z",
+        "updatedAt": "2026-09-07T10:50:22.819Z"
+      },
+      {
+        "id": "exp_mtr4ds19_7bcowm",
+        "groupId": "ev",
+        "title": "a101",
+        "amount": 630,
+        "date": "2026-09-06",
+        "category": "diger",
+        "payerId": "hatice",
+        "splits": {
+          "nisu": 315,
+          "hatice": 315
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:50:45.933Z",
+        "updatedAt": "2026-09-07T10:50:45.933Z"
+      },
+      {
+        "id": "exp_mtr4e5rv_oxprvj",
+        "groupId": "ev",
+        "title": "fırın",
+        "amount": 255,
+        "date": "2026-09-06",
+        "category": "diger",
+        "payerId": "hatice",
+        "splits": {
+          "nisu": 127.5,
+          "hatice": 127.5
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:51:03.739Z",
+        "updatedAt": "2026-09-07T10:51:03.739Z"
+      },
+      {
+        "id": "exp_mtr4emeq_7dn4q7",
+        "groupId": "ev",
+        "title": "koltuk,taşıma",
+        "amount": 1900,
+        "date": "2026-09-07",
+        "category": "diger",
+        "payerId": "hatice",
+        "splits": {
+          "nisu": 950,
+          "hatice": 950
+        },
+        "splitMode": "equal",
+        "splitValues": null,
+        "note": "",
+        "createdAt": "2026-09-07T10:51:25.298Z",
+        "updatedAt": "2026-09-07T10:51:25.298Z"
+      }
+    ],
+    "settlements": []
+  }
+}
