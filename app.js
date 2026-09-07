@@ -605,7 +605,18 @@ function openExpenseModal(expenseId=null, preselectedGroupId=null) {
       amountInput.addEventListener('input',()=>{ if(splitMode==='equal') renderSplitEditor(); });
       modeBox.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>{ splitMode=btn.dataset.mode; splitDraft={}; renderSplitEditor(); }));
       root.querySelector('#cancelExpense')?.addEventListener('click',close);
-      root.querySelector('#deleteExpense')?.addEventListener('click',async()=>{ if(!confirm('Bu harcamayı silmek istiyor musun?')) return; await removeEntity('expenses', editing.id); close(); showToast('harcama silindi'); render(); });
+      root.querySelector('#deleteExpense')?.addEventListener('click',async()=>{
+        if(!confirm('Bu harcamayı silmek istiyor musun?')) return;
+        const deletedExpense=structuredClone(editing);
+        await removeEntity('expenses', editing.id);
+        close();
+        showUndoToast('harcama silindi', async()=>{
+          await saveEntity('expenses', deletedExpense);
+          render();
+          showToast('harcama geri geldi ✦');
+        });
+        render();
+      });
       renderPeople(false);
       if (editing) payerSelect.value = editing.payerId;
 
@@ -732,6 +743,30 @@ function resetLocalData() {
 
 function showToast(text) {
   const el=document.createElement('div'); el.className='toast'; el.textContent=text; toastRoot.appendChild(el); setTimeout(()=>el.remove(),2800);
+}
+
+function showUndoToast(text, undo) {
+  toastRoot.querySelectorAll('.toast-undo').forEach(el=>el.remove());
+  const el=document.createElement('div');
+  el.className='toast toast-undo';
+  const message=document.createElement('span');
+  message.textContent=text;
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='toast-action';
+  button.textContent='geri al';
+  el.append(message,button);
+  toastRoot.appendChild(el);
+  let used=false;
+  const timer=setTimeout(()=>el.remove(),6000);
+  button.addEventListener('click',async()=>{
+    if(used)return;
+    used=true;
+    clearTimeout(timer);
+    button.disabled=true;
+    el.remove();
+    await undo();
+  });
 }
 
 function updateSyncUI() {

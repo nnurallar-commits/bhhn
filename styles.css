@@ -167,6 +167,9 @@ textarea.input { min-height: 88px; resize: vertical; }
 .status.error::before { background: var(--danger); }
 .toast-root { position: fixed; z-index: 200; left: 50%; transform: translateX(-50%); bottom: calc(106px + var(--safe-bottom)); width: min(calc(100% - 36px), 520px); display: grid; gap: 8px; pointer-events: none; }
 .toast { padding: 13px 15px; border-radius: 17px; background: #253029; color: white; box-shadow: var(--shadow); animation: toastIn .18s ease-out; font-size: 13px; font-weight: 700; }
+.toast-undo { display: flex; align-items: center; justify-content: space-between; gap: 16px; pointer-events: auto; }
+.toast-action { border: 0; border-radius: 999px; padding: 8px 13px; background: #f4e5a7; color: #253029; font: inherit; font-weight: 900; cursor: pointer; white-space: nowrap; }
+.toast-action:disabled { opacity: .55; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } }
 .search { margin-bottom: 14px; }
 .search input { width: 100%; border: 0; border-radius: 18px; background: var(--surface); padding: 14px 16px; box-shadow: 0 6px 18px rgba(45,55,47,.05); }
