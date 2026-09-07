@@ -35,7 +35,11 @@ const CATEGORY = {
 let state = loadState();
 let currentUserId = localStorage.getItem(PROFILE_KEY) || null;
 let route = parseRoute();
-let cloud = { enabled: false, status: 'local', api: null, auth: null, user: null, workspaceId: null, workspace: null, unsubscribers: [] };
+let cloud = { enabled: false, status: 'local', api: null, auth: null, user: null, workspaceId: null, workspace: null, unsubscribers: [], sharedRef: null };
+let sharedSyncReady = false;
+let applyingSharedState = false;
+let sharedWriteTimer = null;
+let lastSharedJSON = '';
 
 const appShell = document.getElementById('appShell');
 const onboarding = document.getElementById('onboarding');
@@ -77,6 +81,52 @@ function normalizeMembers(members) {
 function persist() {
   state.members = structuredClone(MEMBERS);
   localStorage.setItem(stateStorageKey(cloud.workspaceId), JSON.stringify(state));
+  if (cloud.status === 'shared' && sharedSyncReady && !applyingSharedState) queueSharedUpload();
+}
+
+function queueSharedUpload() {
+  clearTimeout(sharedWriteTimer);
+  sharedWriteTimer = setTimeout(() => pushSharedState(), 180);
+}
+
+async function pushSharedState() {
+  if (!sharedSyncReady || !cloud.sharedRef || !cloud.api) return;
+  const cleanState = JSON.parse(JSON.stringify({ ...state, members: MEMBERS }));
+  const json = JSON.stringify(cleanState);
+  if (json === lastSharedJSON) return;
+  try {
+    const { setDoc, serverTimestamp } = cloud.api;
+    await setDoc(cloud.sharedRef, { state: cleanState, updatedAt: serverTimestamp() });
+    lastSharedJSON = json;
+    if (cloud.status === 'error') setCloudStatus('shared');
+  } catch (err) {
+    console.error('Shared state could not be written', err);
+    setCloudStatus('error');
+    showToast('ortak kayıt gönderilemedi; bağlantıyı kontrol et');
+  }
+}
+
+function applySharedState(nextState) {
+  const normalized = normalizeState(nextState);
+  const json = JSON.stringify(normalized);
+  if (json === lastSharedJSON) return;
+  applyingSharedState = true;
+  state = normalized;
+  MEMBERS = normalizeMembers(state.members || DEFAULT_MEMBERS);
+  lastSharedJSON = JSON.stringify({ ...state, members: MEMBERS });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  renderMemberPicker();
+  if (currentUserId && MEMBERS.some(m => m.id === currentUserId)) {
+    onboarding.hidden = true;
+    appShell.hidden = false;
+    render();
+  } else {
+    currentUserId = null;
+    localStorage.removeItem(PROFILE_KEY);
+    onboarding.hidden = false;
+    appShell.hidden = true;
+  }
+  applyingSharedState = false;
 }
 
 function member(id) { return MEMBERS.find(m => m.id === id) || { id, name: id }; }
@@ -327,8 +377,8 @@ function renderActivity() {
 }
 
 function renderSettings() {
-  const syncText = cloud.status === 'cloud' ? 'Canlı senkronizasyon açık' : cloud.status === 'error' ? 'Bulut bağlantısında sorun var' : 'Bu cihazda yerel mod';
-  const syncClass = cloud.status === 'cloud' ? 'cloud' : cloud.status === 'error' ? 'error' : '';
+  const syncText = ['cloud','shared'].includes(cloud.status) ? 'Canlı senkronizasyon açık' : cloud.status === 'error' ? 'Bulut bağlantısında sorun var' : 'Bu cihazda yerel mod';
+  const syncClass = ['cloud','shared'].includes(cloud.status) ? 'cloud' : cloud.status === 'error' ? 'error' : '';
   const invite = cloud.workspace?.inviteCode || '';
   view.innerHTML = `
     <div class="page-head"><div><p class="eyebrow">bhhn.</p><h1>ayarlar</h1><p class="muted">küçük kasanızın kontrol odası.</p></div></div>
@@ -336,8 +386,8 @@ function renderSettings() {
     ${cloud.status==='cloud' ? `<section class="settings-card invite-card"><h3>${esc(cloud.workspace?.name || 'ortak alan')}</h3><p>arkadaşların hesap açıp bu kodla katılabilir.</p><div class="invite-code"><strong>${esc(invite)}</strong><button class="btn btn-secondary" type="button" data-copy-invite>kodu kopyala</button></div><p class="tiny muted">${MEMBERS.length} kişi · ${MEMBERS.map(m=>esc(m.name)).join(' · ')}</p></section>` : ''}
     <section class="settings-card"><h3>profil</h3><p>Şu an ${esc(member(currentUserId).name)} olarak görünüyorsun.</p><div class="settings-actions"><button class="btn btn-secondary" type="button" data-profile-switch>${cloud.status==='cloud'?'profil / çıkış':'profili değiştir'}</button>${cloud.status!=='cloud'?`<button class="btn btn-primary" type="button" data-add-member-settings>kişi ekle</button>`:''}${cloud.status==='cloud'?`<button class="btn btn-secondary" type="button" data-space-switch>alan değiştir</button>`:''}</div></section>
     <section class="settings-card"><h3>yedek</h3><p>Harcama, grup ve ödemeleri tek JSON dosyasına al.</p><div class="settings-actions"><button class="btn btn-secondary" type="button" data-export>yedek indir</button><button class="btn btn-secondary" type="button" data-import>yedek yükle</button><input id="importFile" type="file" accept="application/json" hidden></div></section>
-    ${cloud.status!=='cloud' ? `<section class="settings-card"><h3>canlı kullanım</h3><p>Firebase bağlandığında herkes kendi hesabıyla girer, davet koduyla alana katılır ve değişiklikler anlık görünür.</p></section>` : ''}
-    <section class="settings-card"><h3>yerel veriyi sıfırla</h3><p>Sadece bu cihazdaki önbelleği temizler.</p><button class="btn btn-danger" type="button" data-reset>verileri sıfırla</button></section>`;
+    ${cloud.status==='local' ? `<section class="settings-card"><h3>canlı kullanım</h3><p>Bağlantı kurulduğunda bütün cihazlarda değişiklikler anlık görünür.</p></section>` : ''}
+    <section class="settings-card"><h3>${cloud.status==='shared'?'ortak veriyi':'yerel veriyi'} sıfırla</h3><p>${cloud.status==='shared'?'Bütün telefonlardaki ortak harcama, grup ve ödemeleri temizler.':'Sadece bu cihazdaki önbelleği temizler.'}</p><button class="btn btn-danger" type="button" data-reset>verileri sıfırla</button></section>`;
   view.querySelector('[data-profile-switch]').addEventListener('click', openProfileModal);
   view.querySelector('[data-add-member-settings]')?.addEventListener('click', openAddMemberModal);
   view.querySelector('[data-space-switch]')?.addEventListener('click',()=>showWorkspaceGate(cloud.user));
@@ -676,7 +726,8 @@ function importBackup(event) {
 }
 
 function resetLocalData() {
-  if(!confirm('Bu cihazdaki tüm bhhn. verilerini sıfırlamak istediğine emin misin?'))return; state=freshState(); persist(); showToast('yerel veriler sıfırlandı'); render();
+  const question=cloud.status==='shared'?'Bu işlem bütün telefonlardaki ortak bhhn. verilerini sıfırlar. Emin misin?':'Bu cihazdaki tüm bhhn. verilerini sıfırlamak istediğine emin misin?';
+  if(!confirm(question))return; state=freshState(); MEMBERS=normalizeMembers(state.members); persist(); showToast(cloud.status==='shared'?'ortak veriler sıfırlandı':'yerel veriler sıfırlandı'); render();
 }
 
 function showToast(text) {
@@ -685,7 +736,7 @@ function showToast(text) {
 
 function updateSyncUI() {
   syncButton.classList.remove('sync-local','sync-cloud','sync-error');
-  if(cloud.status==='cloud'){ syncButton.classList.add('sync-cloud'); syncButton.textContent='☁'; syncButton.title='Canlı Firebase senkronizasyonu açık'; }
+  if(['cloud','shared'].includes(cloud.status)){ syncButton.classList.add('sync-cloud'); syncButton.textContent='☁'; syncButton.title='Canlı Firebase senkronizasyonu açık'; }
   else if(cloud.status==='error'){ syncButton.classList.add('sync-error'); syncButton.textContent='!'; syncButton.title='Bulut bağlantısı sorunlu; yerel mod çalışıyor'; }
   else { syncButton.classList.add('sync-local'); syncButton.textContent='☁︎'; syncButton.title='Yerel mod'; }
 }
@@ -693,20 +744,45 @@ function updateSyncUI() {
 function setCloudStatus(status){ cloud.status=status; updateSyncUI(); if(route.name==='settings' && currentUserId) renderSettings(); }
 
 async function initCloud() {
+  // V7 her zaman eski haliyle hemen açılır; Firebase yalnızca arka planda eşitler.
+  bootLocal();
   const cfg=window.BHHN_FIREBASE_CONFIG;
-  if(!cfg || !cfg.apiKey || !cfg.projectId) { bootLocal(); return; }
+  if(!cfg || !cfg.apiKey || !cfg.projectId) return;
   try {
     const appMod=await import('https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js');
-    const authMod=await import('https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js');
     const fsMod=await import('https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js');
-    const app=appMod.initializeApp(cfg); const auth=authMod.getAuth(app); const db=fsMod.getFirestore(app);
-    cloud.api={...fsMod,...authMod,db}; cloud.auth=auth; cloud.enabled=true;
-    authMod.onAuthStateChanged(auth, async user=>{
-      clearCloudListeners(); cloud.user=user || null;
-      if(!user){ cloud.workspaceId=null; cloud.workspace=null; currentUserId=null; setCloudStatus('local'); showAuthGate(); return; }
-      await showWorkspaceGate(user);
-    });
-  } catch(err) { console.error('Firebase init failed',err); cloud.enabled=false; setCloudStatus('error'); bootLocal(); showToast('bulut açılamadı, yerel mod çalışıyor'); }
+    const app=appMod.initializeApp(cfg);
+    const db=fsMod.getFirestore(app);
+    cloud.api={...fsMod,db};
+    cloud.enabled=true;
+    cloud.sharedRef=fsMod.doc(db,'sharedApps','bhhn-main');
+
+    const first=await fsMod.getDoc(cloud.sharedRef);
+    if(first.exists() && first.data()?.state) {
+      applySharedState(first.data().state);
+    } else {
+      // Ortak kayıt henüz yoksa bu cihazdaki mevcut V7 verisi başlangıç olur.
+      lastSharedJSON='';
+    }
+
+    sharedSyncReady=true;
+    setCloudStatus('shared');
+    if(!first.exists()) await pushSharedState();
+
+    cloud.unsubscribers.push(fsMod.onSnapshot(cloud.sharedRef,snapshot=>{
+      if(snapshot.exists() && snapshot.data()?.state) applySharedState(snapshot.data().state);
+      if(cloud.status==='error') setCloudStatus('shared');
+    },err=>{
+      console.error('Shared listener failed',err);
+      setCloudStatus('error');
+    }));
+  } catch(err) {
+    console.error('Firebase init failed',err);
+    cloud.enabled=false;
+    sharedSyncReady=false;
+    setCloudStatus('error');
+    showToast('ortak bağlantı kurulamadı; Firestore kurallarını kontrol et');
+  }
 }
 function bootLocal(){ cloud.status='local'; state=loadState(); MEMBERS=normalizeMembers(state.members || DEFAULT_MEMBERS); renderMemberPicker(); if(currentUserId && MEMBERS.some(m=>m.id===currentUserId)){onboarding.hidden=true;appShell.hidden=false;render();}else{onboarding.hidden=false;appShell.hidden=true;} }
 function authGateHTML(){ return `<img src="assets/bhhn-logo.png" alt="bhhn. dört arkadaş logosu" class="onboarding-logo" /><div class="onboarding-card auth-card"><p class="eyebrow">balance between us</p><h1>hesabına gir ✦</h1><p class="muted">kendi grupların, kendi arkadaşların. herkes sadece dahil olduğu alanı görür.</p><button class="btn btn-google" id="googleLogin" type="button">G ile devam et</button><div class="auth-divider"><span>veya</span></div><form id="emailAuth" class="form-grid"><div class="field"><label for="authName">adın <span class="muted">(ilk kayıt için)</span></label><input class="input" id="authName" maxlength="40" autocomplete="name" placeholder="Nisu"></div><div class="field"><label for="authEmail">e-posta</label><input class="input" id="authEmail" type="email" autocomplete="email" required placeholder="sen@ornek.com"></div><div class="field"><label for="authPassword">şifre</label><input class="input" id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="en az 6 karakter"></div><div id="authError" class="inline-error hide"></div><div class="auth-actions"><button class="btn btn-secondary" id="emailLogin" type="button">giriş yap</button><button class="btn btn-primary" type="submit">hesap aç</button></div></form><button class="text-button auth-demo" id="localDemo" type="button">sadece bu cihazda dene</button></div>`; }
@@ -780,7 +856,7 @@ async function uploadAllToCloud(){if(!cloud.api||!cloud.workspaceId)return;const
 document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>navigate(btn.dataset.route)));
 document.getElementById('profileButton').addEventListener('click',openProfileModal);
 fab.addEventListener('click',()=>openExpenseModal(null,route.name==='group'?route.id:null));
-syncButton.addEventListener('click',()=>{ if(cloud.status==='cloud')showToast('4 cihaz için canlı senkronizasyon açık'); else if(cloud.status==='error')showToast('bulut bağlantısı yok; yerel kayıtlar çalışıyor'); else showToast('yerel mod: Firebase eklenince dört cihaz anlık eşitlenir'); });
+syncButton.addEventListener('click',()=>{ if(['cloud','shared'].includes(cloud.status))showToast('canlı senkronizasyon açık ✦'); else if(cloud.status==='error')showToast('bulut bağlantısı yok; yerel kayıtlar çalışıyor'); else showToast('yerel mod'); });
 window.addEventListener('hashchange',render);
 window.addEventListener('beforeunload',()=>cloud.unsubscribers.forEach(fn=>fn?.()));
 

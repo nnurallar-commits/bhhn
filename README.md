@@ -1,68 +1,30 @@
-# bhhn. v7 — balance between us
+# bhhn. v7 — ortak telefon senkronizasyonu
 
-Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
+Gönderilen orijinal V7 görünümü ve kullanım akışı korunmuştur. Giriş, hesap veya ortak alan ekranı yoktur.
 
-## Özellikler
-- E-posta/şifre ile hesap açma ve giriş
-- Google ile giriş
-- Her kullanıcı için özel hesap
-- Birden fazla ortak alan
-- 8 karakterli güvenli davet koduyla arkadaş ekleme
-- Alan içinde sınırsız grup
-- Harcama ekleme / düzenleme / silme
-- Eşit, tutar bazlı veya yüzdeyle bölme
-- Borçları sadeleştirme ve ödeme kapatma
-- Canlı Firestore senkronizasyonu
-- Workspace'e özel yerel önbellek ve JSON yedek
-- PWA, iPhone ana ekranına eklenebilir
+## Bu pakette çalışanlar
 
-## v7 düzeltmesi
+- Nisu, Hatice Nur, Berfin ve Heda profilleri
+- Profil ekranından yeni kişi ekleme
+- Grup, harcama ve ödeme ekleme/düzenleme/silme
+- Kişiye göre borç/alacak hesabı
+- PC ve telefonlar arasında gerçek zamanlı Firestore senkronizasyonu
+- GitHub'a `assets` klasörü eksik yüklense bile görünen gömülü logo
+- Eski PWA önbelleğini yenileyen `v7sync1` sürümü
 
-- Logo uygulama koduna gömüldü; GitHub Pages üzerinde `assets` klasörü eksik olsa bile görünür.
-- Eksik görsel dosyaları artık Service Worker kurulumunu engellemez.
-- Tarayıcı sekme ikonu da gömülü logodan oluşturulur.
+## Yayınlama
 
-## v6 yenilikleri
+1. Bu ZIP içindeki bütün dosya ve `assets` klasörünü GitHub reposunun köküne yükle.
+2. Firebase Console → Firestore Database → Rules ekranında bu paketteki `firestore.rules` içeriğini yayınla.
+3. İlk olarak mevcut harcama ve grupların bulunduğu PC'de `https://nnurallar-commits.github.io/bhhn/?v=7sync1` adresini aç.
+4. Üstteki bulut simgesi dolu görünce aynı adresi telefonlarda aç.
 
-- Gönderilen dört arkadaş görseli ana sayfada, üst çubukta, açılışta, ayarlarda ve PWA ikonlarında görünür.
-- İlk profil seçim ekranında herkes için doğrudan `kişi ekle` düğmesi bulunur.
-- Ayarlar > Profil bölümünden de yeni kişi eklenebilir.
-- Yeni kişi kayıtlı gruplara sonradan eklenebilir veya yeni grup açabilir.
-- Service Worker önbelleği `bhhn-v6` olarak yenilendi.
+İlk açılan PC'deki V7 verisi ortak başlangıç kaydı olur. Bundan sonra kişi, grup, harcama ve ödeme değişiklikleri diğer açık cihazlara otomatik gelir.
 
-## v5 yenilikleri
+## Önemli
 
-- Uygulamanın orijinal `bhhn.` logosu açılışta, ayarlarda ve PWA ikonlarında kullanılıyor.
-- Varsayılan üye adı her yerde `Hatice Nur` olarak gösteriliyor; eski yerel kayıtlar açılırken otomatik güncelleniyor.
-- Ana sayfadaki “senin borcun” kartında toplamın altında kime ne kadar borç olduğu kişi kişi yazıyor.
-- Service Worker önbelleği `bhhn-v5` olarak yenilendi.
-
-## v3 güvenlik düzeltmeleri
-- Workspace belgeleri artık sadece üyeler tarafından okunabilir.
-- Davet kodu araması workspace koleksiyonunu herkese açmaz; ayrı `workspaceInvites` belgesi kullanılır.
-- Davetle katılan kullanıcı yalnızca kendi UID'sini ve kendi profilini ekleyebilir.
-- Normal workspace değişiklikleri yalnızca owner tarafından yapılabilir.
-- Davet kodu kriptografik rastgele sayı üreteciyle hazırlanır ve kod çakışırsa batch yazımı başarısız olur; uygulama yeni kodla tekrar dener.
-- Profil belgelerinde e-posta paylaşılmaz; yalnızca UID ve görünen ad tutulur.
-- Her workspace kendi localStorage anahtarını kullanır.
-- Service Worker önbelleği sürümle birlikte yenilenir; eski kodun takılı kalma riski azaltılır.
-
-## Firebase kurulumu
-1. Firebase Console'da bir proje ve Web App oluştur.
-2. Authentication > Sign-in method içinde **Email/Password** ve **Google** sağlayıcılarını aç.
-3. Firestore Database oluştur.
-4. `firestore.rules` içeriğini Firestore Rules ekranına yapıştır ve yayınla.
-5. Firebase Web App config değerlerini `firebase-config.js` içine koy.
-6. Siteyi GitHub Pages, Firebase Hosting veya Netlify gibi HTTPS bir statik hosta yayınla.
-
-`firebase-config.js` boş bırakılırsa uygulama otomatik olarak yerel demo modunda açılır.
-
-## Veri modeli
-- `/workspaces/{workspaceId}`: alan adı, owner UID, üyeler, profil isimleri ve davet kodu
-- `/workspaceInvites/{inviteCode}`: sadece workspace ID + owner UID; yalnızca doğrudan kodla `get` yapılabilir, listeleme kapalıdır
-- `/workspaces/{workspaceId}/groups/{groupId}`
-- `/workspaces/{workspaceId}/expenses/{expenseId}`
-- `/workspaces/{workspaceId}/settlements/{settlementId}`
+Bu sürümde giriş ekranı olmadığı için uygulama linkini bilen herkes ortak veriyi görebilir ve değiştirebilir. Firestore kuralları yalnızca `/sharedApps/bhhn-main` belgesini açar; projenin diğer belgeleri kapalıdır.
 
 ## Kontrol
-`app.js`, `firebase-config.js`, `sw.js` Node syntax kontrolünden; `manifest.webmanifest` JSON doğrulamasından geçirilmiştir. Firebase Rules'ın nihai davranışı Firebase projesinde Rules Simulator/Emulator ile de test edilmelidir.
+
+`app.js`, `firebase-config.js` ve `sw.js` JavaScript sözdizimi kontrolünden; `manifest.webmanifest` JSON doğrulamasından geçirilmiştir.

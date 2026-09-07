@@ -1,6 +1,6 @@
-const CACHE = 'bhhn-v7';
+const CACHE = 'bhhn-v7-shared-sync-1';
 // Logo HTML içine gömülü; GitHub'da assets klasörü eksik olsa da önbellek kurulumu bozulmaz.
-const ASSETS = ['./','./index.html','./styles.css','./app.js','./manifest.webmanifest'];
+const ASSETS = ['./','./index.html','./styles.css','./app.js?v=7sync1','./firebase-config.js?v=7sync1','./manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', event => {
