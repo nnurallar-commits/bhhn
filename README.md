@@ -1,4 +1,4 @@
-# bhhn. v3 — balance between us
+# bhhn. v5 — balance between us
 
 Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 
@@ -16,6 +16,13 @@ Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 - Workspace'e özel yerel önbellek ve JSON yedek
 - PWA, iPhone ana ekranına eklenebilir
 
+## v5 yenilikleri
+
+- Uygulamanın orijinal `bhhn.` logosu açılışta, ayarlarda ve PWA ikonlarında kullanılıyor.
+- Varsayılan üye adı her yerde `Hatice Nur` olarak gösteriliyor; eski yerel kayıtlar açılırken otomatik güncelleniyor.
+- Ana sayfadaki “senin borcun” kartında toplamın altında kime ne kadar borç olduğu kişi kişi yazıyor.
+- Service Worker önbelleği `bhhn-v5` olarak yenilendi.
+
 ## v3 güvenlik düzeltmeleri
 - Workspace belgeleri artık sadece üyeler tarafından okunabilir.
 - Davet kodu araması workspace koleksiyonunu herkese açmaz; ayrı `workspaceInvites` belgesi kullanılır.
@@ -24,7 +31,7 @@ Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 - Davet kodu kriptografik rastgele sayı üreteciyle hazırlanır ve kod çakışırsa batch yazımı başarısız olur; uygulama yeni kodla tekrar dener.
 - Profil belgelerinde e-posta paylaşılmaz; yalnızca UID ve görünen ad tutulur.
 - Her workspace kendi localStorage anahtarını kullanır.
-- Service Worker önbelleği `bhhn-v3` olarak yenilendi; eski kodun takılı kalma riski azaltıldı.
+- Service Worker önbelleği sürümle birlikte yenilenir; eski kodun takılı kalma riski azaltılır.
 
 ## Firebase kurulumu
 1. Firebase Console'da bir proje ve Web App oluştur.

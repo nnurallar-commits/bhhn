@@ -2,7 +2,7 @@ const STORAGE_KEY = 'bhhn_state_v1';
 const PROFILE_KEY = 'bhhn_current_user';
 const DEFAULT_MEMBERS = [
   { id: 'nisu', name: 'Nisu' },
-  { id: 'hatice', name: 'Hatice' },
+  { id: 'hatice', name: 'Hatice Nur' },
   { id: 'berfin', name: 'Berfin' },
   { id: 'heda', name: 'Heda' },
 ];
@@ -57,9 +57,13 @@ function freshState() {
 }
 
 function normalizeState(input) {
-  const members = Array.isArray(input?.members) && input.members.length ? input.members : structuredClone(DEFAULT_MEMBERS);
+  const members = normalizeMembers(Array.isArray(input?.members) && input.members.length ? input.members : DEFAULT_MEMBERS);
   MEMBERS = structuredClone(members);
   return { version: 2, members, groups: Array.isArray(input?.groups) ? input.groups : structuredClone(DEFAULT_GROUPS), expenses: Array.isArray(input?.expenses) ? input.expenses : [], settlements: Array.isArray(input?.settlements) ? input.settlements : [] };
+}
+
+function normalizeMembers(members) {
+  return structuredClone(members).map(m => m.id === 'hatice' ? { ...m, name: 'Hatice Nur' } : m);
 }
 
 function persist() {
@@ -172,6 +176,12 @@ function currentUserTotals(groupId=null) {
   };
 }
 
+function currentUserDebtBreakdown(groupId=null) {
+  return simplifyDebts(groupId)
+    .filter(d => d.fromId === currentUserId)
+    .map(d => ({ name: member(d.toId).name, amount: d.amount }));
+}
+
 function render() {
   if (!currentUserId) return;
   route = parseRoute();
@@ -186,6 +196,7 @@ function render() {
 
 function renderHome() {
   const totals = currentUserTotals();
+  const debtBreakdown = currentUserDebtBreakdown();
   const recent = combinedActivity().slice(0,4);
   view.innerHTML = `
     <div class="page-head"><div><p class="eyebrow">bhhn club</p><h1>selam ${esc(member(currentUserId).name.toLowerCase())} ✦</h1><p class="muted">hesaplar sakin, arkadaşlıklar baki.</p></div></div>
@@ -194,7 +205,7 @@ function renderHome() {
       <h2 style="font-size:28px;margin:7px 0 0;letter-spacing:-.04em">aramızdaki denge</h2>
       <div class="hero-balance">
         <div class="balance-box"><small>sana gelecek</small><strong class="balance-positive">${money(totals.owedToYou)}</strong></div>
-        <div class="balance-box"><small>senin borcun</small><strong class="balance-negative">${money(totals.youOwe)}</strong></div>
+        <div class="balance-box"><small>senin borcun</small><strong class="balance-negative">${money(totals.youOwe)}</strong><div class="balance-details">${debtBreakdown.length ? debtBreakdown.map(d=>`<span><b>${esc(d.name)}’a</b> ${money(d.amount)}</span>`).join('') : '<span>borcun yok ✓</span>'}</div></div>
       </div>
     </section>
     <div class="quick-actions">
@@ -357,9 +368,65 @@ function openProfileModal() {
     });
     return;
   }
-  openModal('profili değiştir', `<div class="member-picker">${MEMBERS.map(m=>`<button class="member-choice" type="button" data-switch="${m.id}">${avatarHTML(m.id,'md')}<span>${esc(m.name)}</span></button>`).join('')}</div>`, (root,close)=>{
+  openModal('profili değiştir', `<div class="member-picker">${MEMBERS.map(m=>`<button class="member-choice" type="button" data-switch="${m.id}">${avatarHTML(m.id,'md')}<span>${esc(m.name)}</span></button>`).join('')}<button class="member-choice" type="button" data-add-member><span class="avatar avatar-md">＋</span><span>kişi ekle</span></button></div>`, (root,close)=>{
     root.querySelectorAll('[data-switch]').forEach(btn=>btn.addEventListener('click',()=>{ chooseProfile(btn.dataset.switch); close(); }));
+    root.querySelector('[data-add-member]')?.addEventListener('click',()=>{ close(); openAddMemberModal(); });
   });
+}
+
+function slugifyMemberName(name='') {
+  return name
+    .toLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'kisi';
+}
+
+function createMemberId(name='') {
+  const base = slugifyMemberName(name);
+  let candidate = base;
+  let i = 2;
+  while (MEMBERS.some(m => m.id === candidate)) {
+    candidate = `${base}-${i}`;
+    i += 1;
+  }
+  return candidate;
+}
+
+function openAddMemberModal() {
+  openModal('kişi ekle', `
+    <form id="memberForm" class="form-grid">
+      <div class="field"><label for="memberName">adı</label><input class="input" id="memberName" maxlength="40" required placeholder="mesela: Hatice Nur"></div>
+      <div id="memberError" class="inline-error hide"></div>
+      <div class="form-actions"><button class="btn btn-secondary" type="button" id="cancelMember">vazgeç</button><button class="btn btn-primary" type="submit">ekle</button></div>
+    </form>`, (root, close) => {
+      const form = root.querySelector('#memberForm');
+      const input = root.querySelector('#memberName');
+      input?.focus();
+      root.querySelector('#cancelMember')?.addEventListener('click', () => { close(); openProfileModal(); });
+      form?.addEventListener('submit', e => {
+        e.preventDefault();
+        const name = input.value.trim().replace(/\s+/g, ' ');
+        const error = root.querySelector('#memberError');
+        if (!name) {
+          error.textContent = 'bir isim yaz.';
+          error.classList.remove('hide');
+          return;
+        }
+        if (MEMBERS.some(m => m.name.toLowerCase('tr-TR') === name.toLowerCase('tr-TR'))) {
+          error.textContent = 'bu kişi zaten var.';
+          error.classList.remove('hide');
+          return;
+        }
+        const newMember = { id: createMemberId(name), name };
+        MEMBERS.push(newMember);
+        persist();
+        chooseProfile(newMember.id);
+        close();
+        showToast(`${name} eklendi`);
+      });
+    });
 }
 
 function openGroupModal(groupId=null) {
@@ -628,7 +695,7 @@ async function initCloud() {
     });
   } catch(err) { console.error('Firebase init failed',err); cloud.enabled=false; setCloudStatus('error'); bootLocal(); showToast('bulut açılamadı, yerel mod çalışıyor'); }
 }
-function bootLocal(){ cloud.status='local'; state=loadState(); MEMBERS=structuredClone(state.members || DEFAULT_MEMBERS); renderMemberPicker(); if(currentUserId && MEMBERS.some(m=>m.id===currentUserId)){onboarding.hidden=true;appShell.hidden=false;render();}else{onboarding.hidden=false;appShell.hidden=true;} }
+function bootLocal(){ cloud.status='local'; state=loadState(); MEMBERS=normalizeMembers(state.members || DEFAULT_MEMBERS); renderMemberPicker(); if(currentUserId && MEMBERS.some(m=>m.id===currentUserId)){onboarding.hidden=true;appShell.hidden=false;render();}else{onboarding.hidden=false;appShell.hidden=true;} }
 function authGateHTML(){ return `<img src="assets/logo.png" alt="bhhn. logosu" class="onboarding-logo" /><div class="onboarding-card auth-card"><p class="eyebrow">balance between us</p><h1>hesabına gir ✦</h1><p class="muted">kendi grupların, kendi arkadaşların. herkes sadece dahil olduğu alanı görür.</p><button class="btn btn-google" id="googleLogin" type="button">G ile devam et</button><div class="auth-divider"><span>veya</span></div><form id="emailAuth" class="form-grid"><div class="field"><label for="authName">adın <span class="muted">(ilk kayıt için)</span></label><input class="input" id="authName" maxlength="40" autocomplete="name" placeholder="Nisu"></div><div class="field"><label for="authEmail">e-posta</label><input class="input" id="authEmail" type="email" autocomplete="email" required placeholder="sen@ornek.com"></div><div class="field"><label for="authPassword">şifre</label><input class="input" id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="en az 6 karakter"></div><div id="authError" class="inline-error hide"></div><div class="auth-actions"><button class="btn btn-secondary" id="emailLogin" type="button">giriş yap</button><button class="btn btn-primary" type="submit">hesap aç</button></div></form><button class="text-button auth-demo" id="localDemo" type="button">sadece bu cihazda dene</button></div>`; }
 function showAuthGate(){ appShell.hidden=true;onboarding.hidden=false;onboarding.innerHTML=authGateHTML(); const {GoogleAuthProvider,signInWithPopup,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile}=cloud.api; onboarding.querySelector('#googleLogin').addEventListener('click',async()=>{try{await signInWithPopup(cloud.auth,new GoogleAuthProvider());}catch(e){showAuthError(friendlyAuthError(e));}}); onboarding.querySelector('#emailAuth').addEventListener('submit',async e=>{e.preventDefault();const name=onboarding.querySelector('#authName').value.trim();const email=onboarding.querySelector('#authEmail').value.trim();const pass=onboarding.querySelector('#authPassword').value;if(!name)return showAuthError('ilk kayıt için adını yaz.');try{const cred=await createUserWithEmailAndPassword(cloud.auth,email,pass);await updateProfile(cred.user,{displayName:name});}catch(e){showAuthError(friendlyAuthError(e));}}); onboarding.querySelector('#emailLogin').addEventListener('click',async()=>{const email=onboarding.querySelector('#authEmail').value.trim();const pass=onboarding.querySelector('#authPassword').value;try{await signInWithEmailAndPassword(cloud.auth,email,pass);}catch(e){showAuthError(friendlyAuthError(e));}}); onboarding.querySelector('#localDemo').addEventListener('click',()=>{cloud.enabled=false;bootLocal();}); }
 function showAuthError(text){const el=onboarding.querySelector('#authError');if(el){el.textContent=text;el.classList.remove('hide');}}
@@ -681,17 +748,17 @@ async function loadWorkspace(workspaceId){
   const {db,doc,getDoc,collection,getDocs,onSnapshot}=cloud.api;
   // Önce bu alana ait cihaz önbelleğini kullan; ağdan gelen veri hemen üzerine yazılır.
   const cached=loadState(workspaceId);
-  if(cached){state=cached;MEMBERS=structuredClone(cached.members||[]);}
+  if(cached){state=cached;MEMBERS=normalizeMembers(cached.members||[]);}
   try{
     const wref=doc(db,'workspaces',workspaceId),wsnap=await getDoc(wref);
     if(!wsnap.exists())throw new Error('workspace missing');
     cloud.workspaceId=workspaceId;cloud.workspace={id:workspaceId,...wsnap.data()};
-    MEMBERS=Object.values(cloud.workspace.profiles||{});
+    MEMBERS=normalizeMembers(Object.values(cloud.workspace.profiles||{}));
     if(!MEMBERS.some(m=>m.id===currentUserId))throw new Error('not a member');
     state={version:3,members:structuredClone(MEMBERS),groups:[],expenses:[],settlements:[]};
     for(const kind of ['groups','expenses','settlements']){const snap=await getDocs(collection(db,'workspaces',workspaceId,kind));state[kind]=snap.docs.map(d=>d.data());}
     persist();onboarding.hidden=true;appShell.hidden=false;setCloudStatus('cloud');render();
-    cloud.unsubscribers.push(onSnapshot(wref,snap=>{if(!snap.exists())return;cloud.workspace={id:workspaceId,...snap.data()};MEMBERS=Object.values(cloud.workspace.profiles||{});state.members=structuredClone(MEMBERS);persist();render();},e=>{console.error(e);setCloudStatus('error');}));
+    cloud.unsubscribers.push(onSnapshot(wref,snap=>{if(!snap.exists())return;cloud.workspace={id:workspaceId,...snap.data()};MEMBERS=normalizeMembers(Object.values(cloud.workspace.profiles||{}));state.members=structuredClone(MEMBERS);persist();render();},e=>{console.error(e);setCloudStatus('error');}));
     for(const kind of ['groups','expenses','settlements'])cloud.unsubscribers.push(onSnapshot(collection(db,'workspaces',workspaceId,kind),snap=>{state[kind]=snap.docs.map(d=>d.data());persist();render();},e=>{console.error(e);setCloudStatus('error');}));
   }catch(e){console.error(e);setCloudStatus('error');await showWorkspaceGate(cloud.user);}
 }
