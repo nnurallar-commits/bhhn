@@ -1,6 +1,5 @@
 const STORAGE_KEY = 'bhhn_state_v1';
 const PROFILE_KEY = 'bhhn_current_user';
-const SYNC_OPT_IN_KEY = 'bhhn_sync_opt_in';
 
 // GitHub'a görsel klasörü yüklenmese bile uygulamadaki tüm logo alanlarını çalıştır.
 document.addEventListener('error', event => {
@@ -37,7 +36,6 @@ let state = loadState();
 let currentUserId = localStorage.getItem(PROFILE_KEY) || null;
 let route = parseRoute();
 let cloud = { enabled: false, status: 'local', api: null, auth: null, user: null, workspaceId: null, workspace: null, unsubscribers: [] };
-let pendingCloudMigration = null;
 
 const appShell = document.getElementById('appShell');
 const onboarding = document.getElementById('onboarding');
@@ -338,11 +336,10 @@ function renderSettings() {
     ${cloud.status==='cloud' ? `<section class="settings-card invite-card"><h3>${esc(cloud.workspace?.name || 'ortak alan')}</h3><p>arkadaşların hesap açıp bu kodla katılabilir.</p><div class="invite-code"><strong>${esc(invite)}</strong><button class="btn btn-secondary" type="button" data-copy-invite>kodu kopyala</button></div><p class="tiny muted">${MEMBERS.length} kişi · ${MEMBERS.map(m=>esc(m.name)).join(' · ')}</p></section>` : ''}
     <section class="settings-card"><h3>profil</h3><p>Şu an ${esc(member(currentUserId).name)} olarak görünüyorsun.</p><div class="settings-actions"><button class="btn btn-secondary" type="button" data-profile-switch>${cloud.status==='cloud'?'profil / çıkış':'profili değiştir'}</button>${cloud.status!=='cloud'?`<button class="btn btn-primary" type="button" data-add-member-settings>kişi ekle</button>`:''}${cloud.status==='cloud'?`<button class="btn btn-secondary" type="button" data-space-switch>alan değiştir</button>`:''}</div></section>
     <section class="settings-card"><h3>yedek</h3><p>Harcama, grup ve ödemeleri tek JSON dosyasına al.</p><div class="settings-actions"><button class="btn btn-secondary" type="button" data-export>yedek indir</button><button class="btn btn-secondary" type="button" data-import>yedek yükle</button><input id="importFile" type="file" accept="application/json" hidden></div></section>
-    ${cloud.status!=='cloud' ? `<section class="settings-card"><h3>telefon-PC senkronizasyonu</h3><p>Uygulama eski görünümünde kalır. Girişi yalnızca bir kez burada yaparsın; mevcut grupların korunur.</p><button class="btn btn-primary" type="button" data-cloud-login>senkronizasyonu aç</button></section>` : ''}
+    ${cloud.status!=='cloud' ? `<section class="settings-card"><h3>canlı kullanım</h3><p>Firebase bağlandığında herkes kendi hesabıyla girer, davet koduyla alana katılır ve değişiklikler anlık görünür.</p></section>` : ''}
     <section class="settings-card"><h3>yerel veriyi sıfırla</h3><p>Sadece bu cihazdaki önbelleği temizler.</p><button class="btn btn-danger" type="button" data-reset>verileri sıfırla</button></section>`;
   view.querySelector('[data-profile-switch]').addEventListener('click', openProfileModal);
   view.querySelector('[data-add-member-settings]')?.addEventListener('click', openAddMemberModal);
-  view.querySelector('[data-cloud-login]')?.addEventListener('click', openCloudLoginModal);
   view.querySelector('[data-space-switch]')?.addEventListener('click',()=>showWorkspaceGate(cloud.user));
   view.querySelector('[data-copy-invite]')?.addEventListener('click',()=>navigator.clipboard?.writeText(invite).then(()=>showToast('davet kodu kopyalandı ✦')).catch(()=>showToast(`davet kodu: ${invite}`)));
   view.querySelector('[data-export]').addEventListener('click', exportBackup);
@@ -380,7 +377,7 @@ function openProfileModal() {
   if (cloud.status === 'cloud' && cloud.user) {
     openModal('profil', `<div class="settings-card"><h3>${esc(member(currentUserId).name)}</h3><p>${esc(cloud.user.email || '')}</p></div><div class="form-actions"><button class="btn btn-secondary" id="closeProfile" type="button">kapat</button><button class="btn btn-danger" id="signOutProfile" type="button">çıkış yap</button></div>`, (root,close)=>{
       root.querySelector('#closeProfile').addEventListener('click',close);
-      root.querySelector('#signOutProfile').addEventListener('click',async()=>{ localStorage.removeItem(SYNC_OPT_IN_KEY);close();await cloud.api.signOut(cloud.auth); });
+      root.querySelector('#signOutProfile').addEventListener('click',async()=>{ close(); await cloud.api.signOut(cloud.auth); });
     });
     return;
   }
@@ -706,45 +703,17 @@ async function initCloud() {
     cloud.api={...fsMod,...authMod,db}; cloud.auth=auth; cloud.enabled=true;
     authMod.onAuthStateChanged(auth, async user=>{
       clearCloudListeners(); cloud.user=user || null;
-      if(!user){ cloud.workspaceId=null; cloud.workspace=null; setCloudStatus('local'); bootLocal(); return; }
-      if(localStorage.getItem(SYNC_OPT_IN_KEY)!=='1'){await authMod.signOut(auth);bootLocal();return;}
+      if(!user){ cloud.workspaceId=null; cloud.workspace=null; currentUserId=null; setCloudStatus('local'); showAuthGate(); return; }
       await showWorkspaceGate(user);
     });
   } catch(err) { console.error('Firebase init failed',err); cloud.enabled=false; setCloudStatus('error'); bootLocal(); showToast('bulut açılamadı, yerel mod çalışıyor'); }
 }
 function bootLocal(){ cloud.status='local'; state=loadState(); MEMBERS=normalizeMembers(state.members || DEFAULT_MEMBERS); renderMemberPicker(); if(currentUserId && MEMBERS.some(m=>m.id===currentUserId)){onboarding.hidden=true;appShell.hidden=false;render();}else{onboarding.hidden=false;appShell.hidden=true;} }
-function openCloudLoginModal(){
-  pendingCloudMigration={state:structuredClone(state),userId:currentUserId};
-  const selectedProfileName=member(currentUserId).name;
-  openModal('senkronizasyonu aç', `<form id="cloudAuthForm" class="form-grid"><p class="muted">Mevcut grupların ve borçların korunacak. Aynı e-posta ve şifreyle telefonda da giriş yapacaksın.</p><div class="field"><label for="cloudEmail">e-posta</label><input class="input" id="cloudEmail" type="email" autocomplete="email" required></div><div class="field"><label for="cloudPassword">şifre</label><input class="input" id="cloudPassword" type="password" minlength="6" autocomplete="current-password" required></div><div id="cloudAuthError" class="inline-error hide"></div><div class="form-actions"><button class="btn btn-secondary" id="cloudLogin" type="button">giriş yap</button><button class="btn btn-primary" type="submit">ilk kez hesap aç</button></div></form>`,(root,close)=>{
-    const email=()=>root.querySelector('#cloudEmail').value.trim();
-    const password=()=>root.querySelector('#cloudPassword').value;
-    const showError=e=>{const el=root.querySelector('#cloudAuthError');el.textContent=friendlyAuthError(e);el.classList.remove('hide');};
-    root.querySelector('#cloudAuthForm').addEventListener('submit',async e=>{e.preventDefault();localStorage.setItem(SYNC_OPT_IN_KEY,'1');try{const cred=await cloud.api.createUserWithEmailAndPassword(cloud.auth,email(),password());await cloud.api.updateProfile(cred.user,{displayName:selectedProfileName});close();}catch(err){localStorage.removeItem(SYNC_OPT_IN_KEY);showError(err);}});
-    root.querySelector('#cloudLogin').addEventListener('click',async()=>{localStorage.setItem(SYNC_OPT_IN_KEY,'1');try{await cloud.api.signInWithEmailAndPassword(cloud.auth,email(),password());close();}catch(err){localStorage.removeItem(SYNC_OPT_IN_KEY);showError(err);}});
-  });
-}
 function authGateHTML(){ return `<img src="assets/bhhn-logo.png" alt="bhhn. dört arkadaş logosu" class="onboarding-logo" /><div class="onboarding-card auth-card"><p class="eyebrow">balance between us</p><h1>hesabına gir ✦</h1><p class="muted">kendi grupların, kendi arkadaşların. herkes sadece dahil olduğu alanı görür.</p><button class="btn btn-google" id="googleLogin" type="button">G ile devam et</button><div class="auth-divider"><span>veya</span></div><form id="emailAuth" class="form-grid"><div class="field"><label for="authName">adın <span class="muted">(ilk kayıt için)</span></label><input class="input" id="authName" maxlength="40" autocomplete="name" placeholder="Nisu"></div><div class="field"><label for="authEmail">e-posta</label><input class="input" id="authEmail" type="email" autocomplete="email" required placeholder="sen@ornek.com"></div><div class="field"><label for="authPassword">şifre</label><input class="input" id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="en az 6 karakter"></div><div id="authError" class="inline-error hide"></div><div class="auth-actions"><button class="btn btn-secondary" id="emailLogin" type="button">giriş yap</button><button class="btn btn-primary" type="submit">hesap aç</button></div></form><button class="text-button auth-demo" id="localDemo" type="button">sadece bu cihazda dene</button></div>`; }
 function showAuthGate(){ appShell.hidden=true;onboarding.hidden=false;onboarding.innerHTML=authGateHTML(); const {GoogleAuthProvider,signInWithPopup,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile}=cloud.api; onboarding.querySelector('#googleLogin').addEventListener('click',async()=>{try{await signInWithPopup(cloud.auth,new GoogleAuthProvider());}catch(e){showAuthError(friendlyAuthError(e));}}); onboarding.querySelector('#emailAuth').addEventListener('submit',async e=>{e.preventDefault();const name=onboarding.querySelector('#authName').value.trim();const email=onboarding.querySelector('#authEmail').value.trim();const pass=onboarding.querySelector('#authPassword').value;if(!name)return showAuthError('ilk kayıt için adını yaz.');try{const cred=await createUserWithEmailAndPassword(cloud.auth,email,pass);await updateProfile(cred.user,{displayName:name});}catch(e){showAuthError(friendlyAuthError(e));}}); onboarding.querySelector('#emailLogin').addEventListener('click',async()=>{const email=onboarding.querySelector('#authEmail').value.trim();const pass=onboarding.querySelector('#authPassword').value;try{await signInWithEmailAndPassword(cloud.auth,email,pass);}catch(e){showAuthError(friendlyAuthError(e));}}); onboarding.querySelector('#localDemo').addEventListener('click',()=>{cloud.enabled=false;bootLocal();}); }
 function showAuthError(text){const el=onboarding.querySelector('#authError');if(el){el.textContent=text;el.classList.remove('hide');}}
-function friendlyAuthError(e){const c=e?.code||'';if(c.includes('email-already-in-use'))return 'bu e-posta zaten kayıtlı. giriş yap.';if(c.includes('invalid-credential'))return 'e-posta veya şifre hatalı.';if(c.includes('weak-password'))return 'şifre en az 6 karakter olmalı.';if(c.includes('invalid-email'))return 'e-posta adresini kontrol et.';if(c.includes('operation-not-allowed'))return 'Firebase giriş yöntemi açık değil.';if(c.includes('unauthorized-domain'))return 'bu web adresi Firebase yetkili alanlarına eklenmemiş.';if(c.includes('network-request-failed'))return 'Firebase bağlantısı kurulamadı; interneti kontrol et.';if(c.includes('popup-closed'))return 'giriş penceresi kapatıldı.';return `giriş yapılamadı${c?` (${c})`:''}.`;}
-async function showWorkspaceGate(user){
-  const {db,collection,query,where,getDocs}=cloud.api;
-  const localProfileId=localStorage.getItem(PROFILE_KEY);
-  currentUserId=user.uid;
-  try{
-    const snap=await getDocs(query(collection(db,'workspaces'),where('memberUids','array-contains',user.uid)));
-    const spaces=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(spaces.length===1)return loadWorkspace(spaces[0].id);
-    renderWorkspacePicker(spaces);
-  }catch(e){
-    console.error(e);
-    currentUserId=localProfileId;
-    cloud.workspaceId=null;cloud.workspace=null;
-    bootLocal();setCloudStatus('error');
-    showToast('senkronizasyon açılamadı; eski grupların bu cihazda açık');
-  }
-}
+function friendlyAuthError(e){const c=e?.code||'';if(c.includes('email-already-in-use'))return 'bu e-posta zaten kayıtlı. giriş yap.';if(c.includes('invalid-credential'))return 'e-posta veya şifre hatalı.';if(c.includes('weak-password'))return 'şifre en az 6 karakter olmalı.';if(c.includes('popup-closed'))return 'giriş penceresi kapatıldı.';return 'giriş yapılamadı. internet bağlantını ve Firebase ayarlarını kontrol et.';}
+async function showWorkspaceGate(user){const {db,collection,query,where,getDocs}=cloud.api;currentUserId=user.uid;try{const snap=await getDocs(query(collection(db,'workspaces'),where('memberUids','array-contains',user.uid)));const spaces=snap.docs.map(d=>({id:d.id,...d.data()}));if(spaces.length===1)return loadWorkspace(spaces[0].id);renderWorkspacePicker(spaces);}catch(e){console.error(e);showAuthGate();showAuthError('alanlar yüklenemedi. Firestore kurallarını kontrol et.');}}
 function renderWorkspacePicker(spaces){appShell.hidden=true;onboarding.hidden=false;onboarding.innerHTML=`<img src="assets/bhhn-logo.png" alt="bhhn. dört arkadaş logosu" class="onboarding-logo" /><div class="onboarding-card auth-card"><p class="eyebrow">ortak alanların</p><h1>${spaces.length?'hangisine girelim?':'ilk alanını aç ✦'}</h1><p class="muted">bir alanın içinde istediğin kadar harcama grubu açabilirsin.</p><div class="workspace-list">${spaces.map(w=>`<button class="member-choice workspace-choice" data-space="${esc(w.id)}" type="button"><span class="workspace-badge">${esc((w.name||'B').slice(0,1).toUpperCase())}</span><span><strong>${esc(w.name||'ortak alan')}</strong><small>${(w.memberUids||[]).length} kişi</small></span></button>`).join('')}</div><form id="createWorkspace" class="mini-form"><input class="input" id="workspaceName" maxlength="40" placeholder="mesela: bhhn. ✦" required><button class="btn btn-primary" type="submit">alan oluştur</button></form><form id="joinWorkspace" class="mini-form"><input class="input invite-input" id="inviteCode" maxlength="8" placeholder="DAVET KODU" required><button class="btn btn-secondary" type="submit">koda katıl</button></form><button class="text-button" id="logoutGate" type="button">çıkış yap</button><div id="workspaceError" class="inline-error hide"></div></div>`;onboarding.querySelectorAll('[data-space]').forEach(b=>b.addEventListener('click',()=>loadWorkspace(b.dataset.space)));onboarding.querySelector('#createWorkspace').addEventListener('submit',async e=>{e.preventDefault();await createWorkspace(onboarding.querySelector('#workspaceName').value.trim());});onboarding.querySelector('#joinWorkspace').addEventListener('submit',async e=>{e.preventDefault();await joinWorkspace(onboarding.querySelector('#inviteCode').value.trim().toUpperCase());});onboarding.querySelector('#logoutGate').addEventListener('click',()=>cloud.api.signOut(cloud.auth));}
 function workspaceError(t){const e=onboarding.querySelector('#workspaceError');if(e){e.textContent=t;e.classList.remove('hide');}}
 function randomInvite(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);return Array.from(bytes,b=>chars[b%chars.length]).join('');}
@@ -762,32 +731,12 @@ async function createWorkspace(name){
       batch.set(doc(db,'workspaceInvites',code),{workspaceId:id,ownerUid:u.uid,createdAt:data.createdAt});
       await batch.commit();
       await loadWorkspace(id);
-      if(pendingCloudMigration) await migrateLocalSnapshotToCloud(pendingCloudMigration);
       return;
     }catch(e){
       console.error('workspace create attempt failed',e);
       if(attempt===5)workspaceError('alan oluşturulamadı. Firestore kurallarını ve bağlantıyı kontrol et.');
     }
   }
-}
-function remapMemberIdInSnapshot(snapshot,fromId,toId){
-  const out=structuredClone(snapshot),mapId=id=>id===fromId?toId:id;
-  out.members=(out.members||[]).map(m=>m.id===fromId?{...m,id:toId}:m).filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i);
-  out.groups=(out.groups||[]).map(g=>({...g,memberIds:[...new Set((g.memberIds||[]).map(mapId))]}));
-  out.expenses=(out.expenses||[]).map(e=>({...e,payerId:mapId(e.payerId),splits:Object.fromEntries(Object.entries(e.splits||{}).map(([id,value])=>[mapId(id),value]))}));
-  out.settlements=(out.settlements||[]).map(s=>({...s,fromId:mapId(s.fromId),toId:mapId(s.toId)}));
-  return out;
-}
-async function migrateLocalSnapshotToCloud(migration){
-  const oldId=migration.userId,newId=cloud.user?.uid;
-  if(!oldId||!newId||!cloud.workspaceId)return;
-  try{
-    const migrated=remapMemberIdInSnapshot(migration.state,oldId,newId);
-    const profiles=Object.fromEntries((migrated.members||[]).map(m=>[m.id,m]));
-    await cloud.api.updateDoc(cloud.api.doc(cloud.api.db,'workspaces',cloud.workspaceId),{profiles});
-    state=normalizeState(migrated);MEMBERS=normalizeMembers(state.members);currentUserId=newId;persist();
-    await uploadAllToCloud();pendingCloudMigration=null;showToast('eski grupların buluta taşındı ✓');render();
-  }catch(err){console.error(err);showToast('gruplar cihazda güvende; buluta aktarma tamamlanamadı');}
 }
 async function joinWorkspace(code){
   if(!code)return workspaceError('davet kodunu yaz.');
@@ -824,13 +773,7 @@ async function loadWorkspace(workspaceId){
     persist();onboarding.hidden=true;appShell.hidden=false;setCloudStatus('cloud');render();
     cloud.unsubscribers.push(onSnapshot(wref,snap=>{if(!snap.exists())return;cloud.workspace={id:workspaceId,...snap.data()};MEMBERS=normalizeMembers(Object.values(cloud.workspace.profiles||{}));state.members=structuredClone(MEMBERS);persist();render();},e=>{console.error(e);setCloudStatus('error');}));
     for(const kind of ['groups','expenses','settlements'])cloud.unsubscribers.push(onSnapshot(collection(db,'workspaces',workspaceId,kind),snap=>{state[kind]=snap.docs.map(d=>d.data());persist();render();},e=>{console.error(e);setCloudStatus('error');}));
-  }catch(e){
-    console.error(e);
-    currentUserId=localStorage.getItem(PROFILE_KEY);
-    cloud.workspaceId=null;cloud.workspace=null;
-    bootLocal();setCloudStatus('error');
-    showToast('ortak alan açılamadı; eski grupların bu cihazda açık');
-  }
+  }catch(e){console.error(e);setCloudStatus('error');await showWorkspaceGate(cloud.user);}
 }
 function clearCloudListeners(){cloud.unsubscribers.forEach(fn=>{try{fn?.()}catch{}});cloud.unsubscribers=[];}
 async function uploadAllToCloud(){if(!cloud.api||!cloud.workspaceId)return;const {db,doc,setDoc,collection,getDocs,deleteDoc}=cloud.api;for(const kind of ['groups','expenses','settlements']){const snap=await getDocs(collection(db,'workspaces',cloud.workspaceId,kind));await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));await Promise.all(state[kind].map(obj=>setDoc(doc(db,'workspaces',cloud.workspaceId,kind,obj.id),obj)));}}

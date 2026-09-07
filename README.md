@@ -1,31 +1,4 @@
-# bhhn. v12 — balance between us
-
-## v12 oturum temizliği
-
-- Önceki sürümden kalan Firebase oturumu otomatik kapatılır ve eski yerel ekran açılır.
-- Bulut modu yalnızca Ayarlar içinden kullanıcı özellikle açtığında devreye girer.
-
-## v11 güvenli geri dönüş
-
-- Eski veya yarım kalmış Firebase oturumu artık tam ekran giriş sayfasını açmaz.
-- Firestore erişimi başarısız olursa kayıtlı yerel profil ve gruplar otomatik geri yüklenir.
-
-## v10 eski görünüm + güvenli geçiş
-
-- Tam ekran giriş sayfası kaldırıldı; uygulama eskisi gibi profil seçimiyle açılır.
-- Firebase girişi yalnızca Ayarlar içindeki senkronizasyon düğmesinden açılır.
-- İlk ortak alan oluşturulurken mevcut yerel gruplar, harcamalar ve borçlar otomatik taşınır.
-
-## v9 Firebase düzeltmesi
-
-- Firebase API anahtarındaki `0/O` karakter hatası düzeltildi.
-- Giriş hataları artık gerçek Firebase hata kodunu anlaşılır biçimde gösterir.
-
-## v8 Firebase bağlantısı
-
-- `bhhn-ac697` Firebase web yapılandırması bağlandı.
-- E-posta/şifre ve Google giriş altyapısı aktif edildi.
-- PC ve telefon aynı hesap/ortak alana girdiğinde Firestore üzerinden aynı kayıtları görür.
+# bhhn. v7 — balance between us
 
 Splitwise tarzı, mobil öncelikli ortak harcama PWA'sı.
 
